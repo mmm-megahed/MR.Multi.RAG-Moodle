@@ -59,3 +59,8 @@ app.on_event("shutdown")(shutdown_span)
 app.include_router(base.base_router)
 app.include_router(data.data_router)
 app.include_router(nlp.nlp_router)
+
+
+@app.get("/welcome") #test endpoint
+def welcome():
+    return {"message": "Welcome to the mini-RAG API!"}

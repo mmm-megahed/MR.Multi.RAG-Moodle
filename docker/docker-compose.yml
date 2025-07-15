@@ -6,7 +6,7 @@ services:
       dockerfile: docker/minirag/Dockerfile
     container_name: fastapi
     ports:
-      - "8000:8000"
+      - "5000:8000"
     volumes:
       - fastapi_data:/app/assets
     networks:
