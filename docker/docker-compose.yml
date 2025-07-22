@@ -152,6 +152,23 @@ services:
       - backend
     restart: always
 
+  # pgAdmin Service for PostgreSQL GUI
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    env_file:
+      - ./env/.env.pgadmin
+    networks:
+      - backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 # Networks definition
 networks:
   backend:
@@ -165,3 +182,4 @@ volumes:
   qdrant_data:
   prometheus_data:
   grafana_data:
+  pgadmin_data:
