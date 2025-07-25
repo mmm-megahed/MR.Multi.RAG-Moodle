@@ -2,8 +2,8 @@ import os
 import psycopg2
 import requests
 import time
-import requests
 import mimetypes
+import json
 
 FASTAPI_URL = f"http://{os.getenv('FASTAPI_HOST')}:{os.getenv('FASTAPI_PORT')}"
 
@@ -32,7 +32,13 @@ MOODLEDATA = os.getenv("MOODLEDATA", "/moodledata")
 FASTAPI_HOST = os.getenv("FASTAPI_HOST", "fastapi")
 FASTAPI_PORT = os.getenv("FASTAPI_PORT", "8000")
 
+# Processing configuration from env vars with defaults
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
+OVERLAP_SIZE = int(os.getenv("OVERLAP_SIZE", "200"))
+DO_RESET = int(os.getenv("DO_RESET", "1"))  # 0 = false, 1 = true
+
 UPLOAD_ENDPOINT = f"http://{FASTAPI_HOST}:{FASTAPI_PORT}/api/v1/data/upload/{{course_id}}"
+PROCESS_ENDPOINT = f"http://{FASTAPI_HOST}:{FASTAPI_PORT}/api/v1/data/process/{{course_id}}"
 
 DB_DSN = f"dbname={DB_NAME} user={DB_USER} password={DB_PASS} host={DB_HOST} port={DB_PORT}"
 
@@ -100,7 +106,7 @@ def upload_file(course_id, full_path, filename, mimetype=None):
 
     if not os.path.exists(full_path):
         print(f"[!] File not found: {full_path}")
-        return
+        return None
 
     url = UPLOAD_ENDPOINT.format(course_id=course_id)
 
@@ -114,34 +120,93 @@ def upload_file(course_id, full_path, filename, mimetype=None):
         resp = requests.post(url, files=files)
 
     if resp.ok:
-        print(f"[✓] Uploaded: {filename}")
+        response_data = resp.json()
+        file_id = response_data.get('file_id')
+        print(f"[✓] Uploaded: {filename} -> file_id: {file_id}")
+        return file_id
     else:
         print(f"[✗] Failed to upload {filename}: {resp.status_code} {resp.text}")
+        return None
+
+def process_files(course_id, file_ids=None, chunk_size=CHUNK_SIZE, overlap_size=OVERLAP_SIZE, do_reset=DO_RESET):
+    """
+    Process uploaded files for chunking and vectorization
+    
+    Args:
+        course_id: The course/project ID
+        file_ids: List of specific file IDs to process (optional)
+        chunk_size: Size of each chunk
+        overlap_size: Overlap between chunks
+        do_reset: Whether to reset existing chunks (1) or append (0)
+    """
+    print(f"[INFO] Starting processing for course ID: {course_id}")
+    
+    url = PROCESS_ENDPOINT.format(course_id=course_id)
+    
+    # Prepare the request payload
+    payload = {
+        "chunk_size": chunk_size,
+        "overlap_size": overlap_size,
+        "do_reset": do_reset
+    }
+    
+    # If specific file IDs provided, process them individually
+    if file_ids:
+        total_chunks = 0
+        total_files = 0
+        
+        for file_id in file_ids:
+            if file_id is None:
+                continue
+                
+            print(f"[INFO] Processing file: {file_id}")
+            payload["file_id"] = file_id
+            
+            headers = {'Content-Type': 'application/json'}
+            resp = requests.post(url, json=payload, headers=headers)
+            
+            if resp.ok:
+                response_data = resp.json()
+                chunks = response_data.get('inserted_chunks', 0)
+                files = response_data.get('processed_files', 0)
+                total_chunks += chunks
+                total_files += files
+                print(f"[✓] Processed file {file_id}: {chunks} chunks created")
+            else:
+                print(f"[✗] Failed to process file {file_id}: {resp.status_code} {resp.text}")
+        
+        print(f"[INFO] Processing complete: {total_files} files, {total_chunks} total chunks")
+    
+    else:
+        # Process all files for the project
+        print(f"[INFO] Processing all files for course {course_id}")
+        
+        # Don't include file_id in payload to process all files
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.post(url, json=payload, headers=headers)
+        
+        if resp.ok:
+            response_data = resp.json()
+            chunks = response_data.get('inserted_chunks', 0)
+            files = response_data.get('processed_files', 0)
+            print(f"[✓] Processing complete: {files} files, {chunks} chunks created")
+        else:
+            print(f"[✗] Failed to process files: {resp.status_code} {resp.text}")
 
 def main(course_id):
     print(f"[INFO] Fetching files for course ID: {course_id}")
     results = get_course_resources(course_id)
     print(f"[INFO] Found {len(results)} resource(s)")
 
+    uploaded_file_ids = []
+    
+    # Step 1: Upload all files
+    print(f"\n=== UPLOAD PHASE ===")
     for row in results:
-        # Let's map the columns correctly based on the SQL query
-        # Columns are: id, course, module, type, activityname, linkurl, fileid, filepath, filename, relpath, fileuserid, filesize, mimetype, fileauthor, timecreated, timemodified
-        cm_id = row[0]
-        course = row[1] 
-        module = row[2]
-        type_name = row[3]
-        activityname = row[4]
-        linkurl = row[5]
-        fileid = row[6]
-        filepath = row[7]
+        # Column mapping based on SQL query
         filename = row[8]
         relpath = row[9]
-        fileuserid = row[10]
-        filesize = row[11]
-        mimetype = row[12]  # This is the correct index for f.mimetype
-        fileauthor = row[13]
-        timecreated = row[14]
-        timemodified = row[15]
+        mimetype = row[12]
 
         if not filename or filename.strip() == '.' or not filename.strip():
             print(f"[!] Skipping file with invalid filename: {filename}")
@@ -154,8 +219,24 @@ def main(course_id):
         full_path = os.path.join(MOODLEDATA, 'filedir', relpath)
         
         print(f"[DEBUG] Processing: filename='{filename}', mimetype='{mimetype}', path='{full_path}'")
-        upload_file(course_id, full_path, filename, mimetype)
-
+        file_id = upload_file(course_id, full_path, filename, mimetype)
+        
+        if file_id:
+            uploaded_file_ids.append(file_id)
+    
+    # Step 2: Process uploaded files
+    if uploaded_file_ids:
+        print(f"\n=== PROCESSING PHASE ===")
+        print(f"[INFO] Successfully uploaded {len(uploaded_file_ids)} files")
+        print(f"[INFO] Processing configuration: chunk_size={CHUNK_SIZE}, overlap_size={OVERLAP_SIZE}, do_reset={DO_RESET}")
+        
+        # Process all files at once (more efficient)
+        process_files(course_id, file_ids=None)  # None means process all files for the project
+        
+        # Alternative: Process files individually (uncomment if needed)
+        # process_files(course_id, file_ids=uploaded_file_ids)
+    else:
+        print(f"[!] No files were successfully uploaded, skipping processing phase")
 
 if __name__ == "__main__":
     main(COURSE_ID)
