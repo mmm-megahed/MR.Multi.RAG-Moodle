@@ -24,7 +24,7 @@ services:
       dockerfile: docker/minirag/Dockerfile
     container_name: fastapi
     ports:
-      - "5000:8000"
+      - "8000:8000"
     volumes:
       - fastapi_data:/app/assets
     networks:
@@ -77,7 +77,7 @@ services:
     container_name: qdrant
     ports:
       - "6333:6333"
-      #- "6334:6334"
+      - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -168,6 +168,27 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  uploader:
+    build:
+      context: ./uploader
+    container_name: uploader
+    depends_on:
+      - postgres
+      - fastapi
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: minirag
+      DB_USER: postgres
+      DB_PASS: minirag2222
+      COURSE_ID: 2
+      MOODLEDATA: /moodledata
+      FASTAPI_HOST: fastapi
+      FASTAPI_PORT: 8000
+    volumes:
+      - moodle_data:/moodledata:ro
+    networks:
+      - backend
 
 # Networks definition
 networks:
