@@ -35,10 +35,16 @@ FASTAPI_PORT = os.getenv("FASTAPI_PORT", "8000")
 # Processing configuration from env vars with defaults
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
 OVERLAP_SIZE = int(os.getenv("OVERLAP_SIZE", "200"))
-DO_RESET = int(os.getenv("DO_RESET", "1"))  # 0 = false, 1 = true
+DO_RESET = int(os.getenv("DO_RESET", "0"))  # 0 = false, 1 = true
+
+# Indexing configuration from env vars with defaults
+INDEX_DO_RESET = int(os.getenv("INDEX_DO_RESET", "0"))  # 0 = false, 1 = true
+GET_INDEX_INFO = int(os.getenv("GET_INDEX_INFO", "1"))  # 0 = false, 1 = true
 
 UPLOAD_ENDPOINT = f"http://{FASTAPI_HOST}:{FASTAPI_PORT}/api/v1/data/upload/{{course_id}}"
 PROCESS_ENDPOINT = f"http://{FASTAPI_HOST}:{FASTAPI_PORT}/api/v1/data/process/{{course_id}}"
+INDEX_ENDPOINT = f"http://{FASTAPI_HOST}:{FASTAPI_PORT}/api/v1/nlp/index/push/{{course_id}}"
+INDEX_INFO_ENDPOINT = f"http://{FASTAPI_HOST}:{FASTAPI_PORT}/api/v1/nlp/index/info/{{course_id}}"
 
 DB_DSN = f"dbname={DB_NAME} user={DB_USER} password={DB_PASS} host={DB_HOST} port={DB_PORT}"
 
@@ -128,6 +134,54 @@ def upload_file(course_id, full_path, filename, mimetype=None):
         print(f"[✗] Failed to upload {filename}: {resp.status_code} {resp.text}")
         return None
 
+def index_project(course_id, do_reset=INDEX_DO_RESET):
+    """
+    Index processed chunks into vector database
+    
+    Args:
+        course_id: The course/project ID
+        do_reset: Whether to reset existing vectors (1) or append (0)
+    """
+    print(f"[INFO] Starting vector indexing for course ID: {course_id}")
+    
+    url = INDEX_ENDPOINT.format(course_id=course_id)
+    
+    # Prepare the request payload
+    payload = {
+        "do_reset": do_reset
+    }
+    
+    headers = {'Content-Type': 'application/json'}
+    resp = requests.post(url, json=payload, headers=headers)
+    
+    if resp.ok:
+        response_data = resp.json()
+        inserted_count = response_data.get('inserted_items_count', 0)
+        print(f"[✓] Vector indexing complete: {inserted_count} items indexed")
+        return True
+    else:
+        print(f"[✗] Failed to index vectors: {resp.status_code} {resp.text}")
+        return False
+
+def get_index_info(course_id):
+    """
+    Get information about the vector index for a project
+    
+    Args:
+        course_id: The course/project ID
+    """
+    print(f"[INFO] Retrieving index info for course ID: {course_id}")
+    
+    url = INDEX_INFO_ENDPOINT.format(course_id=course_id)
+    
+    resp = requests.get(url)
+    
+    if resp.ok:
+        response_data = resp.json()
+        collection_info = response_data.get('collection_info', {})
+        print(f"[INFO] Index info retrieved:")
+        for key, value in collection_info.items():
+            print(f"  {key}: {value}")
 def process_files(course_id, file_ids=None, chunk_size=CHUNK_SIZE, overlap_size=OVERLAP_SIZE, do_reset=DO_RESET):
     """
     Process uploaded files for chunking and vectorization
@@ -225,6 +279,7 @@ def main(course_id):
             uploaded_file_ids.append(file_id)
     
     # Step 2: Process uploaded files
+    processing_success = False
     if uploaded_file_ids:
         print(f"\n=== PROCESSING PHASE ===")
         print(f"[INFO] Successfully uploaded {len(uploaded_file_ids)} files")
@@ -232,11 +287,32 @@ def main(course_id):
         
         # Process all files at once (more efficient)
         process_files(course_id, file_ids=None)  # None means process all files for the project
+        processing_success = True
         
         # Alternative: Process files individually (uncomment if needed)
         # process_files(course_id, file_ids=uploaded_file_ids)
     else:
         print(f"[!] No files were successfully uploaded, skipping processing phase")
+        return
+    
+    # Step 3: Index into vector database
+    if processing_success:
+        print(f"\n=== INDEXING PHASE ===")
+        print(f"[INFO] Starting vector indexing")
+        print(f"[INFO] Indexing configuration: do_reset={INDEX_DO_RESET}")
+        
+        indexing_success = index_project(course_id)
+        
+        # Step 4: Get index information (optional)
+        if indexing_success and GET_INDEX_INFO:
+            print(f"\n=== INDEX INFO ===")
+            get_index_info(course_id)
+    
+    print(f"\n=== PIPELINE COMPLETE ===")
+    print(f"[INFO] Full pipeline completed for course {course_id}")
+    if uploaded_file_ids:
+        print(f"[INFO] Files processed: {len(uploaded_file_ids)}")
+    print(f"[INFO] Ready for querying!")
 
 if __name__ == "__main__":
     main(COURSE_ID)
