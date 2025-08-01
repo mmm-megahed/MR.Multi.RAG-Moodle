@@ -10,6 +10,8 @@ from sqlalchemy.orm import sessionmaker
 # Import metrics setup
 from utils.metrics import setup_metrics
 
+from routes.video_processor import router as video_router
+
 app = FastAPI()
 
 # Setup Prometheus metrics
@@ -60,6 +62,7 @@ app.include_router(base.base_router)
 app.include_router(data.data_router)
 app.include_router(nlp.nlp_router)
 
+app.include_router(video_router)
 
 @app.get("/welcome") #test endpoint
 def welcome():

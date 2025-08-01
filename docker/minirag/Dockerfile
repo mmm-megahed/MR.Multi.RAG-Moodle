@@ -2,7 +2,7 @@ FROM ghcr.io/astral-sh/uv:0.6.14-python3.10-bookworm
 
 WORKDIR /app
 
-# Install additional system dependencies for lxml and other packages
+# Install additional system dependencies for lxml, ffmpeg, and other packages
 RUN apt-get update && apt-get install -y \
     build-essential \
     libavif-dev pkg-config \
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libxslt1-dev \
     libffi-dev \
     curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 COPY src/requirements.txt .

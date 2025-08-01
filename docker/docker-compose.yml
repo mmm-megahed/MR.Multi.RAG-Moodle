@@ -17,7 +17,7 @@ services:
     env_file:
       - ./env/.env.moodle
 
-  # FastAPI Application for RAG
+  # FastAPI Application for RAG (Web Server)
   fastapi:
     build:
       context: ..
@@ -26,15 +26,53 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - fastapi_data:/app/assets
+      # Mount the 'src' directory into the container's 'app' directory
+      - ../src:/app
     networks:
       - backend
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - ./env/.env.app
+    # The command to run the web server via the entrypoint script
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # NEW: Redis Service for Celery Broker
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - backend
+    restart: always
+
+  # NEW: Celery Worker Service for background jobs
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/minirag/Dockerfile
+    container_name: worker
+    volumes:
+      # Mount the 'src' directory so the worker can see the task code
+      - ../src:/app
+      # Also mount moodledata so it can access the video files
+      - moodle_data:/moodledata:ro
+    networks:
+      - backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ./env/.env.app
+    # This command starts the Celery worker via the entrypoint script.
+    # It correctly points to your tasks.py file inside the 'routes' folder.
+    command: celery -A routes.tasks.celery_app worker --loglevel=info
 
   # Nginx Service
   nginx:
@@ -51,7 +89,7 @@ services:
       - backend
     restart: always
 
-  # PostgreSQL Service (formerly pgvector)
+  # PostgreSQL Service
   postgres:
     image: pgvector/pgvector:0.8.0-pg17
     container_name: pgvector
@@ -71,19 +109,6 @@ services:
       retries: 5
       start_period: 10s
 
-#  # Qdrant (VectorDB)
- # qdrant:
-  #  image: qdrant/qdrant:latest
-   # container_name: qdrant
-  #  ports:
-  #    - "6333:6333"
-  #    - "6334:6334"
-  #  volumes:
-  #    - qdrant_data:/qdrant/storage
-  #  networks:
-  #    - backend
-  #  restart: always
-
   # Prometheus Monitoring
   prometheus:
     image: prom/prometheus:latest
@@ -98,10 +123,6 @@ services:
     restart: always
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
 
   # Grafana Dashboard
   grafana:
@@ -152,44 +173,6 @@ services:
       - backend
     restart: always
 
-  # pgAdmin Service for PostgreSQL GUI
-  #pgadmin:
-  #  image: dpage/pgadmin4
-  #  container_name: pgadmin
-  #  ports:
-  #    - "5050:80"
-  #  volumes:
-  #    - pgadmin_data:/var/lib/pgadmin
-  #  env_file:
-  #    - ./env/.env.pgadmin
-  #  networks:
-  #    - backend
-  #  restart: always
-  #  depends_on:
-  #    postgres:
-  #      condition: service_healthy
-  #uploader:
-  #  build:
-  #    context: ./uploader
-  #  container_name: uploader
-  #  depends_on:
-  #    - postgres
-  #    - fastapi
-  #   environment:
-  #     DB_HOST: postgres
-  #     DB_PORT: 5432
-  #     DB_NAME: minirag
-  #     DB_USER: postgres
-  #     DB_PASS: minirag2222
-  #     COURSE_ID: 4
-  #     MOODLEDATA: /moodledata
-  #     FASTAPI_HOST: fastapi
-  #     FASTAPI_PORT: 8000
-  #  volumes:
-  #    - moodle_data:/moodledata:ro
-  #  networks:
-  #    - backend
-
 # Networks definition
 networks:
   backend:
@@ -200,7 +183,5 @@ volumes:
   moodle_data:
   fastapi_data:
   postgres_data:
-#  qdrant_data:
   prometheus_data:
   grafana_data:
-#  pgadmin_data:
