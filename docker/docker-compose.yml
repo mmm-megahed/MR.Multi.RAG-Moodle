@@ -59,7 +59,7 @@ services:
       # Mount the 'src' directory so the worker can see the task code
       - ../src:/app
       # Also mount moodledata so it can access the video files
-      - moodle_data:/moodledata:ro
+      - moodle_data:/moodledata
     networks:
       - backend
     restart: always

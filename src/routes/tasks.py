@@ -46,16 +46,51 @@ def get_course_resources(courseid: int):
 
     # This query is an example for a Moodle-like schema. Adjust if yours differs.
     query = """
-    SELECT
-        f.id, f.contenthash, f.pathnamehash, f.contextid, f.component,
-        f.filearea, f.itemid, f.filepath, f.filename, f.userid, f.filesize,
-        f.mimetype, f.status, f.timecreated, f.timemodified
-    FROM
-        mdl_files f
-    JOIN
-        mdl_context ctx ON f.contextid = ctx.id
-    WHERE
-        ctx.instanceid = %s AND ctx.contextlevel = 50 AND f.mimetype LIKE 'video/%%';
+    SELECT cm.id, cm.course, cm.module, mdl.name AS type,
+       CASE
+            WHEN mf.name IS NOT NULL THEN mf.name
+            WHEN mb.name IS NOT NULL THEN mb.name
+            WHEN mr.name IS NOT NULL THEN mr.name
+            WHEN mu.name IS NOT NULL THEN mu.name
+            WHEN mq.name IS NOT NULL THEN mq.name
+            WHEN mp.name IS NOT NULL THEN mp.name
+            WHEN ml.name IS NOT NULL THEN ml.name
+            ELSE NULL
+       END AS activityname,
+       CASE
+            WHEN mf.name IS NOT NULL THEN CONCAT('/mod/forum/view.php?id=', cm.id)
+            WHEN mb.name IS NOT NULL THEN CONCAT('/mod/book/view.php?id=', cm.id)
+            WHEN mr.name IS NOT NULL THEN CONCAT('/mod/resource/view.php?id=', cm.id)
+            WHEN mu.name IS NOT NULL THEN CONCAT('/mod/url/view.php?id=', cm.id)
+            WHEN mq.name IS NOT NULL THEN CONCAT('/mod/quiz/view.php?id=', cm.id)
+            WHEN mp.name IS NOT NULL THEN CONCAT('/mod/page/view.php?id=', cm.id)
+            WHEN ml.name IS NOT NULL THEN CONCAT('/mod/lesson/view.php?id=', cm.id)
+            ELSE NULL
+       END AS linkurl, 
+       f.id AS fileid, 
+       f.filepath, 
+       f.filename,
+       CONCAT(SUBSTRING(f.contenthash, 1, 2), '/', SUBSTRING(f.contenthash, 3, 2), '/', f.contenthash) AS relpath,
+       f.userid AS fileuserid, 
+       f.filesize, 
+       f.mimetype, 
+       f.author AS fileauthor,
+       f.timecreated, 
+       f.timemodified
+    FROM mdl_course_modules AS cm
+    INNER JOIN mdl_context AS ctx ON ctx.contextlevel = 70 AND ctx.instanceid = cm.id
+    INNER JOIN mdl_modules AS mdl ON cm.module = mdl.id
+    LEFT JOIN mdl_forum AS mf ON mdl.name = 'forum' AND cm.instance = mf.id
+    LEFT JOIN mdl_book AS mb ON mdl.name = 'book' AND cm.instance = mb.id
+    LEFT JOIN mdl_resource AS mr ON mdl.name = 'resource' AND cm.instance = mr.id
+    LEFT JOIN mdl_url AS mu ON mdl.name = 'url' AND cm.instance = mu.id
+    LEFT JOIN mdl_quiz AS mq ON mdl.name = 'quiz' AND cm.instance = mq.id
+    LEFT JOIN mdl_page AS mp ON mdl.name = 'page' AND cm.instance = mp.id
+    LEFT JOIN mdl_lesson AS ml ON mdl.name = 'lesson' AND cm.instance = ml.id
+    LEFT JOIN mdl_files AS f ON f.contextid = ctx.id
+    WHERE cm.course = %s
+    AND mdl.name = 'resource'
+    AND ((f.mimetype LIKE 'video/%%') OR (f.id IS NULL))
     """
     results = []
     try:
@@ -165,15 +200,23 @@ def process_video_job(job_id: str, courseid: int):
     # Load the model once per task execution
     model = whisper.load_model("base")
     uploaded_file_ids = []
+    MOODLEDATA = os.getenv("MOODLEDATA", "/moodledata")
 
     for row in video_rows:
-        # Unpack data based on the query in get_course_resources
-        contenthash = row[1]
+        # Column mapping based on SQL query
         filename = row[8]
+        relpath = row[9]
+        mimetype = row[12]
+
+        if not filename or filename.strip() == '.' or not filename.strip():
+            print(f"[!] Skipping file with invalid filename: {filename}")
+            continue
         
-        # Construct the full path to the video file inside moodledata
-        moodledata_path = os.getenv("MOODLEDATA", "/moodledata")
-        full_path = os.path.join(moodledata_path, 'filedir', contenthash[:2], contenthash[2:4], contenthash)
+        if not mimetype:
+            print(f"[!] Skipping file '{filename}' due to missing mimetype.")
+            continue
+
+        full_path = os.path.join(MOODLEDATA, 'filedir', relpath)
 
         if not os.path.exists(full_path):
             print(f"[JOB {job_id}] File not found, skipping: {full_path}")

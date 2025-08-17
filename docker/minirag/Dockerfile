@@ -22,10 +22,14 @@ RUN uv pip install -r requirements.txt --system
 
 COPY src/ .
 
+
 # Create directory structure for Alembic
 RUN mkdir -p /app/models/db_schemes/minirag/
 
 COPY docker/minirag/alembic.ini /app/models/db_schemes/minirag/alembic.ini
+
+# Pre-download Whisper base model into cache so Celery doesn't need internet
+RUN python3 -c "import whisper; whisper.load_model('base')"
 
 COPY docker/minirag/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
