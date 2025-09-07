@@ -287,7 +287,7 @@ def upload_file_to_fastapi(fastapi_url: str, courseid: int, file_path: str, file
         print(f"[FASTAPI ERROR] Exception during upload of {filename}: {e}")
         return False
 
-def process_files_fastapi(fastapi_url: str, courseid: int, chunk_size: int = 200, overlap_size: int = 20, do_reset: int = 1): #1 = delete table
+def process_files_fastapi(fastapi_url: str, courseid: int, chunk_size: int = 500, overlap_size: int = 100, do_reset: int = 1): #1 = delete table
     """
     Process files through the FastAPI service.
     """
