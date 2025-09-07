@@ -31,3 +31,5 @@ torch
 celery
 redis
 psycopg2-binary
+
+nltk==3.9.1

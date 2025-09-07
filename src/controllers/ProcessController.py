@@ -76,32 +76,41 @@ class ProcessController(BaseController):
 
         return chunks
 
-    def process_simpler_splitter(self, texts: List[str], metadatas: List[dict], chunk_size: int, splitter_tag: str="\n"):
-        
+    def process_simpler_splitter(self, texts: List[str], metadatas: List[dict], chunk_size: int, splitter_tag: str=". "):
         full_text = " ".join(texts)
-
-        # split by splitter_tag
-        lines = [ doc.strip() for doc in full_text.split(splitter_tag) if len(doc.strip()) > 1 ]
-
+        
+        # For whisper transcripts, try multiple splitting strategies
+        if splitter_tag == "\n" and "\n" not in full_text:
+            # Fallback to sentence splitting for continuous text
+            splitter_tag = ". "
+        
+        # Split by splitter_tag
+        segments = [doc.strip() for doc in full_text.split(splitter_tag) if len(doc.strip()) > 1]
+        
         chunks = []
         current_chunk = ""
-
-        for line in lines:
-            current_chunk += line + splitter_tag
-            if len(current_chunk) >= chunk_size:
+        
+        for segment in segments:
+            # Check if adding this segment would exceed chunk_size
+            potential_chunk = current_chunk + segment + splitter_tag
+            
+            if len(potential_chunk) > chunk_size and len(current_chunk) > 0:
+                # Save current chunk and start new one
                 chunks.append(Document(
                     page_content=current_chunk.strip(),
-                    metadata={}
+                    metadata=metadatas[0] if metadatas else {}
                 ))
-
-                current_chunk = ""
-
-        if len(current_chunk) >= 0:
+                current_chunk = segment + splitter_tag
+            else:
+                current_chunk = potential_chunk
+        
+        # Add final chunk if it has content
+        if len(current_chunk.strip()) > 0:
             chunks.append(Document(
                 page_content=current_chunk.strip(),
-                metadata={}
+                metadata=metadatas[0] if metadatas else {}
             ))
-
+        
         return chunks
 
 
