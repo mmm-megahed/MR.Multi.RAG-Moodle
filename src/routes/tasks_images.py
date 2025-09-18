@@ -365,7 +365,7 @@ def process_pdf_images_job(job_id: str, courseid: int):
                 description_content += f"Source PDF: {image_info['source_pdf']}\n"
                 description_content += f"Page: {image_info['page_num']}\n"
                 description_content += f"Context: {image_info['context']}\n"
-                description_content += f"Description: {description}\n"
+                #description_content += f"Description: {description}\n"
                 
                 # Save description file temporarily for FastAPI
                 temp_desc_file = os.path.join(tmpdir, description_filename)
