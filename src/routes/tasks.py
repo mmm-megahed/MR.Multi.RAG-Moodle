@@ -518,8 +518,46 @@ def process_video_job(job_id: str, courseid: int):
             subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
 
             print(f"[JOB {job_id}] Transcribing audio...")
-            result = model.transcribe(audio_path)
-            transcript_text = result["text"]
+            result = model.transcribe(audio_path, verbose=False)
+
+            def format_timestamp(seconds: float) -> str:
+                """Convert seconds to HH:MM:SS format."""
+                hours = int(seconds // 3600)
+                minutes = int((seconds % 3600) // 60)
+                secs = int(seconds % 60)
+                return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+            def transcript_with_timestamps(result, interval: int = 60) -> str:
+                """Format Whisper result into transcript chunks every `interval` seconds."""
+                segments = result["segments"]
+                transcript_lines = []
+                current_chunk = []
+                current_start = 0.0
+
+                for seg in segments:
+                    seg_start = seg["start"]
+                    seg_text = seg["text"].strip()
+
+                    # If we passed the interval, flush current chunk
+                    if seg_start >= current_start + interval:
+                        if current_chunk:
+                            transcript_lines.append(
+                                f"[{format_timestamp(current_start)}] " + " ".join(current_chunk)
+                            )
+                        current_chunk = [seg_text]
+                        current_start = seg_start
+                    else:
+                        current_chunk.append(seg_text)
+
+                # Flush last chunk
+                if current_chunk:
+                    transcript_lines.append(
+                        f"[{format_timestamp(current_start)}] " + " ".join(current_chunk)
+                    )
+
+                return "\n".join(transcript_lines)
+            transcript_text = transcript_with_timestamps(result, interval=30)
+
 
             # Save transcript to a temporary file
             transcript_file_path = os.path.join(tmpdir, "transcript.txt")
