@@ -1,0 +1,345 @@
+<?php
+// simple_chat.php - Final version with in-answer images and enhanced source attribution
+require_once('../../config.php');
+
+$courseid = required_param('courseid', PARAM_INT);
+$query = optional_param('query', '', PARAM_TEXT);
+$limit = optional_param('limit', 10, PARAM_INT);
+$submitted = optional_param('submit', false, PARAM_BOOL);
+
+require_login();
+
+$course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+$context = context_course::instance($courseid);
+require_capability('block/multimodalrag:chat', $context);
+
+$PAGE->set_url('/blocks/multimodalrag/simple_chat.php', ['courseid' => $courseid]);
+$PAGE->set_context($context);
+$PAGE->set_course($course);
+$PAGE->set_title('AI Chat Interface');
+$PAGE->set_heading($course->fullname);
+$PAGE->requires->css('/blocks/multimodalrag/styles.css');
+
+echo $OUTPUT->header();
+
+// =================================================================
+// HELPER FUNCTIONS
+// =================================================================
+
+function simple_chat_api($fastapi_url, $courseid, $query, $limit) {
+    $data = json_encode(['text' => $query, 'limit' => $limit]);
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => "{$fastapi_url}/api/v1/nlp/index/answer/{$courseid}",
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $data,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_TIMEOUT => 90,
+        CURLOPT_CONNECTTIMEOUT => 15
+    ]);
+    $response = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error = curl_error($ch);
+    curl_close($ch);
+    return ['http_code' => $http_code, 'response' => $response, 'curl_error' => $curl_error];
+}
+
+function verify_image_exists($image_name) {
+    global $CFG;
+    $possible_paths = [
+        $CFG->dataroot . '/temp/extracted_images/' . $image_name,
+        $CFG->dataroot . '/temp/images/' . $image_name,
+        $CFG->dataroot . '/blocks/multimodalrag/images/' . $image_name
+    ];
+    foreach ($possible_paths as $path) {
+        if (file_exists($path)) return str_replace($CFG->dataroot, '', $path);
+    }
+    return null;
+}
+
+function parse_enhanced_content($text) {
+    $result = ['content' => $text, 'timestamp' => null, 'page_number' => null];
+    if (preg_match('/^\[(\~?)(\d{1,2}:\d{2}(?::\d{2})?)\]\s*(.+)$/s', $text, $matches)) {
+        $result['timestamp'] = $matches[2];
+        $result['content'] = $matches[3];
+    } elseif (preg_match('/^\[Page\s+(\d+)\]\s*(.+)$/s', $text, $matches)) {
+        $result['page_number'] = intval($matches[1]);
+        $result['content'] = $matches[2];
+    }
+    return $result;
+}
+
+function format_content_type_icon($content_type) {
+    $icons = ['transcript' => 'fa-video text-primary', 'pdf' => 'fa-file-pdf text-danger', 'text' => 'fa-file-text text-info', 'image' => 'fa-image text-success'];
+    return '<i class="fa ' . ($icons[$content_type] ?? 'fa-file text-muted') . '"></i>';
+}
+
+function format_timestamp_link($timestamp, $source_file, $courseid) {
+    if (!$timestamp) return '';
+    $parts = explode(':', $timestamp);
+    $seconds = count($parts) == 2 ? intval($parts[0]) * 60 + intval($parts[1]) : (count($parts) == 3 ? intval($parts[0]) * 3600 + intval($parts[1]) * 60 + intval($parts[2]) : 0);
+    $video_url = new moodle_url('/blocks/multimodalrag/video_player.php', ['courseid' => $courseid, 'file' => $source_file, 't' => $seconds]);
+    return $video_url->out();
+}
+
+/**
+ * ## REVISED AND MORE ROBUST RENDER FUNCTION ##
+ */
+function render_answer_with_images($answer_text, $courseid) {
+    $html = '';
+    // Split the text by the image tag, keeping the image filename as a captured delimiter.
+    $parts = preg_split('/\[IMAGE:\s*([^\]]+)\]/i', $answer_text, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+    for ($i = 0; $i < count($parts); $i++) {
+        if ($i % 2 == 0) {
+            // This is a regular text segment.
+            if (!empty($parts[$i])) {
+                $html .= "<div class='answer-text-segment'>" . nl2br(htmlspecialchars($parts[$i])) . "</div>";
+            }
+        } else {
+            // This is a captured image filename.
+            $image_name = trim($parts[$i]);
+            if ($image_web_path = verify_image_exists($image_name)) {
+                $image_url = new moodle_url('/blocks/multimodalrag/serve_image.php', ['path' => $image_web_path, 'courseid' => $courseid]);
+                $modal_url_out = $image_url->out();
+                $image_name_out = htmlspecialchars($image_name);
+                $html .= "
+                <div class='in-answer-image-container'>
+                    <img src='{$modal_url_out}' alt='{$image_name_out}' class='in-answer-image' onclick='openImageModal(\"{$modal_url_out}\", \"{$image_name_out}\")'>
+                    <div class='in-answer-image-caption'><i class='fa fa-image'></i> {$image_name_out}</div>
+                </div>";
+            } else {
+                // Display a clear error if the file is not found on the server.
+                $html .= "<div class='image-not-found'><i class='fa fa-exclamation-triangle'></i> Image not found on server: <strong>" . htmlspecialchars($image_name) . "</strong></div>";
+            }
+        }
+    }
+    return $html;
+}
+
+$fastapi_url = rtrim(get_config('block_multimodalrag', 'fastapi_url') ?: 'http://fastapi:8000', '/');
+?>
+
+<div class="multimodal-interface-container">
+    <div class="interface-header">
+        <div class="header-content">
+            <div class="header-icon"><i class="fa fa-robot"></i></div>
+            <div class="header-text">
+                <h2>AI Chat Interface</h2>
+                <p>Ask questions and get answers with direct references to your course materials.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="interface-main">
+        <div class="input-section">
+            <div class="input-card">
+                <div class="input-header"><h3><i class="fa fa-comments"></i> Chat with Your Course Content</h3></div>
+                <div class="input-body">
+                    <form method="POST" action="" class="chat-form">
+                        <input type="hidden" name="courseid" value="<?php echo $courseid; ?>">
+                        <input type="hidden" name="submit" value="1">
+                        <div class="form-group">
+                            <label for="query" class="form-label"><i class="fa fa-question-circle"></i> Your Question</label>
+                            <textarea id="query" name="query" class="form-control chat-input" rows="3" placeholder="Ask about concepts, summaries, or find specific information..." required><?php echo htmlspecialchars($query); ?></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="limit" class="form-label"><i class="fa fa-book-reader"></i> Number of References</label>
+                            <select id="limit" name="limit" class="form-control">
+                                <option value="5" <?php echo $limit == 5 ? 'selected' : ''; ?>>5 References</option>
+                                <option value="10" <?php echo $limit == 10 ? 'selected' : ''; ?>>10 References</option>
+                                <option value="15" <?php echo $limit == 15 ? 'selected' : ''; ?>>15 References</option>
+                            </select>
+                        </div>
+                        <div class="form-actions"><button type="submit" class="btn btn-primary btn-chat"><i class="fa fa-paper-plane"></i> Ask AI</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <?php if ($submitted && !empty($query)): ?>
+        <div class="response-section">
+            <div class="response-card">
+                <div class="response-header"><h3><i class="fa fa-brain"></i> AI Response</h3></div>
+                <div class="response-body">
+                    <?php
+                    $result = simple_chat_api($fastapi_url, $courseid, $query, $limit);
+                    
+                    if (!empty($result['curl_error'])) {
+                        echo "<div class='error-message'><i class='fa fa-exclamation-triangle'></i><strong>Connection Error:</strong> " . htmlspecialchars($result['curl_error']) . "</div>";
+                    } elseif ($result['http_code'] == 200) {
+                        $response_data = json_decode($result['response'], true);
+                        if ($response_data && isset($response_data['signal']) && $response_data['signal'] === 'rag_answer_success') {
+                            
+                            echo "<div class='ai-answer'><div class='answer-content'>";
+                            echo "<i class='fa fa-quote-left quote-icon'></i>";
+                            echo "<div class='answer-text-container'>" . render_answer_with_images($response_data['answer'], $courseid) . "</div>";
+                            echo "</div></div>";
+
+                            if (isset($response_data['sources']) && is_array($response_data['sources']) && !empty($response_data['sources'])) {
+                                echo "<div class='source-attribution'>";
+                                echo "<h4><i class='fa fa-book'></i> References from Course Material</h4>";
+                                echo "<div class='source-list'>";
+                                foreach ($response_data['sources'] as $idx => $item) {
+                                    $text = $item['text'] ?? '';
+                                    $metadata = $item['metadata'] ?? [];
+                                    $content_type = $metadata['content_type'] ?? 'text';
+                                    $is_image = (strpos($text, 'Image:') !== false) || $content_type === 'image';
+
+                                    echo "<div class='result-item source-item " . ($is_image ? 'image' : 'text') . "-result enhanced'>";
+                                    echo "<div class='result-header enhanced'><div class='result-meta'>";
+                                    echo "<span class='result-number'>Ref #" . ($idx + 1) . "</span>";
+                                    echo "<span class='result-type'>" . format_content_type_icon($is_image ? 'image' : $content_type) . " " . ($is_image ? 'Image' : ucfirst($content_type)) . "</span>";
+                                    if (isset($item['score'])) {
+                                        $score_class = $item['score'] > 0.8 ? 'high' : ($item['score'] > 0.6 ? 'medium' : 'low');
+                                        echo "<span class='result-score {$score_class}'>Relevance: " . round($item['score'] * 100, 1) . "%</span>";
+                                    }
+                                    echo "</div>"; // .result-meta
+                                    if(isset($metadata['source_file'])) {
+                                        echo "<div class='result-breadcrumb'>Source: <strong>" . htmlspecialchars(basename($metadata['source_file'])) . "</strong></div>";
+                                    }
+                                    echo "</div>"; // .result-header
+                                    
+                                    echo "<div class='result-content enhanced'>";
+                                    if ($is_image) {
+                                        $image_name = ''; $context_text = '';
+                                        if (preg_match('/Image:\s*(.*)/', $text, $matches)) $image_name = trim($matches[1]);
+                                        if (preg_match('/(Description|Context):\s*(.*)/s', $text, $matches)) $context_text = trim($matches[2]);
+                                        if ($image_name && ($image_web_path = verify_image_exists($image_name))) {
+                                            $image_url = new moodle_url('/blocks/multimodalrag/serve_image.php', ['path' => $image_web_path, 'courseid' => $courseid]);
+                                            echo "<div class='image-container enhanced'><img src='" . $image_url->out() . "' alt='" . htmlspecialchars($image_name) . "' class='search-result-image' onclick='openImageModal(\"" . $image_url->out() . "\", \"" . htmlspecialchars($image_name) . "\")'></div>";
+                                        }
+                                        if ($context_text) echo "<div class='image-details-context'><em>" . htmlspecialchars($context_text) . "</em></div>";
+                                    } else {
+                                        $parsed = parse_enhanced_content($text);
+                                        if ($parsed['timestamp'] || $parsed['page_number']) {
+                                            echo "<div class='context-bar'>";
+                                            if ($parsed['timestamp']) {
+                                                $link = format_timestamp_link($parsed['timestamp'], $metadata['source_file'] ?? '', $courseid);
+                                                echo "<div class='context-item timestamp'><i class='fa fa-play-circle'></i> <a href='{$link}' class='timestamp-link' title='Jump to time'>{$parsed['timestamp']}</a></div>";
+                                            }
+                                            if ($parsed['page_number']) echo "<div class='context-item page'><i class='fa fa-file-text-o'></i><span>Page {$parsed['page_number']}</span></div>";
+                                            echo "</div>";
+                                        }
+                                        echo "<div class='result-text'>" . nl2br(htmlspecialchars($parsed['content'])) . "</div>";
+                                    }
+                                    echo "</div></div>";
+                                }
+                                echo "</div></div>";
+                            }
+                        } else {
+                            echo "<div class='error-message'><i class='fa fa-exclamation-circle'></i><strong>API Error:</strong> Invalid response format.</div>";
+                        }
+                    } else {
+                        $response_body = json_decode($result['response'], true);
+                        $detail = isset($response_body['detail']) ? htmlspecialchars($response_body['detail']) : 'No details available.';
+                        echo "<div class='error-message'><i class='fa fa-times-circle'></i><strong>HTTP {$result['http_code']}:</strong> Request failed. <br><small>{$detail}</small></div>";
+                    }
+                    ?>
+                </div>
+            </div>
+            
+            <div class="tech-details">
+                <details class="api-details">
+                    <summary><i class="fa fa-code"></i> Technical Details</summary>
+                     <div class="details-content">
+                        <div class="request-info">
+                            <h4>API Request</h4>
+                            <div class="code-block">
+                                <strong>Endpoint:</strong> POST <?php echo $fastapi_url; ?>/api/v1/nlp/index/answer/<?php echo $courseid; ?><br>
+                                <strong>Payload:</strong> <pre><?php echo json_encode(['text' => $query, 'limit' => $limit], JSON_PRETTY_PRINT); ?></pre>
+                            </div>
+                        </div>
+                        <div class="response-info">
+                            <h4>Raw Response</h4>
+                            <div class="code-block">
+                                <strong>Status:</strong> <?php echo $result['http_code']; ?><br>
+                                <strong>Response:</strong><br>
+                                <pre><?php echo htmlspecialchars($result['response']); ?></pre>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+    
+    <div class="interface-footer">
+        <div class="navigation-links">
+            <a href="/blocks/multimodalrag/simple_search.php?courseid=<?php echo $courseid; ?>" class="nav-link"><i class="fa fa-search"></i> Search Content</a>
+            <?php echo $OUTPUT->continue_button(new moodle_url('/course/view.php', ['id' => $courseid])); ?>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Main AI Answer Styles */
+.ai-answer { background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 12px; padding: 25px; margin-bottom: 30px; }
+.answer-content { display: flex; gap: 15px; }
+.quote-icon { font-size: 20px; color: #007bff; margin-top: 5px; flex-shrink: 0; }
+.answer-text-container { font-size: 16px; line-height: 1.7; color: #343a40; width: 100%; }
+.answer-text-segment { margin-bottom: 1em; }
+.in-answer-image-container { margin: 20px 0; }
+.in-answer-image { max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; border: 1px solid #dee2e6; display: block; margin: 0 auto; }
+.in-answer-image-caption { text-align: center; font-size: 0.9em; color: #6c757d; margin-top: 10px; }
+.image-not-found { font-style: italic; color: #dc3545; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 6px; margin: 15px 0; }
+
+/* Source Attribution Section */
+.source-attribution { margin-top: 20px; }
+.source-attribution h4 { color: #495057; border-bottom: 2px solid #dee2e6; padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+.source-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+/* Individual Source Item Card */
+.result-item.enhanced { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; display: flex; flex-direction: column; }
+.result-header.enhanced { background: #f8f9fa; padding: 12px 15px; border-bottom: 1px solid #dee2e6; }
+.result-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.result-number { background: #6c757d; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.result-type { display: flex; align-items: center; gap: 5px; font-weight: 500; }
+.result-score { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+.result-score.high { background: #d4edda; color: #155724; }
+.result-score.medium { background: #fff3cd; color: #856404; }
+.result-score.low { background: #f8d7da; color: #721c24; }
+.result-breadcrumb { font-size: 12px; color: #6c757d; margin-top: 8px; }
+.result-content.enhanced { padding: 15px; flex-grow: 1; }
+.context-bar { background: #f1f3f5; border-radius: 8px; padding: 10px; margin-bottom: 15px; display: flex; gap: 15px; }
+.result-text { font-size: 15px; line-height: 1.6; color: #495057; }
+.image-container.enhanced { text-align: center; margin-bottom: 15px; }
+.search-result-image { max-width: 100%; max-height: 150px; border-radius: 8px; cursor: pointer; }
+.image-details-context { margin-top: 10px; font-size: 14px; color: #6c757d; background: #f8f9fa; padding: 10px; border-radius: 6px; }
+
+/* Image Modal */
+.image-modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
+.image-modal-content { position: relative; margin: auto; padding: 20px; width: 80%; max-width: 800px; top: 50%; transform: translateY(-50%); text-align: center; }
+.image-modal-content img { max-width: 100%; max-height: 80vh; border-radius: 8px; }
+.image-modal-close { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+.image-modal-title { color: white; margin-top: 15px; font-size: 18px; }
+</style>
+
+<script>
+function openImageModal(imageUrl, imageName) {
+    let modal = document.getElementById('imageModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'imageModal';
+        modal.className = 'image-modal';
+        modal.innerHTML = `<span class="image-modal-close">&times;</span><div class="image-modal-content"><img id="modalImage" src="" alt=""><div id="modalTitle" class="image-modal-title"></div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('.image-modal-close').onclick = closeImageModal;
+        modal.onclick = (event) => { if (event.target === modal) closeImageModal(); };
+        document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeImageModal(); });
+    }
+    document.getElementById('modalImage').src = imageUrl;
+    document.getElementById('modalTitle').textContent = imageName;
+    modal.style.display = 'block';
+}
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    if (modal) modal.style.display = 'none';
+}
+</script>
+
+<?php
+echo $OUTPUT->footer();
+?>
