@@ -157,10 +157,22 @@ async def search_index(request: Request, project_id: int, search_request: Search
                 }
             )
     
+    # Extract source_file from metadata and add to results
+    results_with_files = []
+    file_names = set()
+    
+    for result in results:
+        result_dict = result.dict()
+        source_file = result.metadata.get("source_file", "Unknown")
+        result_dict["source_file"] = source_file
+        file_names.add(source_file)
+        results_with_files.append(result_dict)
+    
     return JSONResponse(
         content={
             "signal": ResponseSignal.VECTORDB_SEARCH_SUCCESS.value,
-            "results": [ result.dict()  for result in results ]
+            "results": results_with_files,
+            "file_names": list(file_names)  # Unique file names
         }
     )
 
