@@ -55,7 +55,7 @@ system_prompt = Template("\n".join([
     "- Check that your response begins with question words forming complete sentences",
     "- Ensure the response demonstrates clear understanding of the query's intent and context",
     "",
-    "Remember: Your goal is to provide responses that score highly on precision, recall, correctness, faithfulness, and relevancy metrics."
+    "Remember: Be precise and concise in your response. Avoid unnecessary information.Your goal is to provide responses that score highly on precision, recall, correctness, faithfulness, and relevancy metrics."
 ]))
 
 #### Document ####
