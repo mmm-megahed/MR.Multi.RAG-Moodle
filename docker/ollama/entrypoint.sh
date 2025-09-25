@@ -16,6 +16,8 @@ done
 
 # Pull models
 ollama pull gemma3:1b || true
+ollama pull phi3:3.8b-mini-4k-instruct-q4_K_S || true
+ollama pull mxbai-embed-large || true
 ollama pull nomic-embed-text || true
 # Keep Ollama running
 wait $PID
