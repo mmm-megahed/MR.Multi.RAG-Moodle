@@ -137,7 +137,7 @@ app.include_router(video_router)
 
 @app.get("/welcome") #test endpoint
 def welcome():
-    return {"message": "Welcome to the mini-RAG API!"}
+    return {"message": "Welcome to the multi-RAG API!"}
 
 @app.get("/health") #health check endpoint
 async def health_check():

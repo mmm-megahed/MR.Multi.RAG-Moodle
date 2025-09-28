@@ -1,4 +1,4 @@
-APP_NAME="mini-RAG"
+APP_NAME="multi-RAG"
 APP_VERSION="0.1"
 
 FILE_ALLOWED_TYPES=["text/plain", "application/pdf"]
@@ -28,8 +28,13 @@ INPUT_DAFAULT_MAX_CHARACTERS=1024
 GENERATION_DAFAULT_MAX_TOKENS=200
 GENERATION_DAFAULT_TEMPERATURE=0.1
 
+
+# Ollama embedding settings (used when EMBEDDING_BACKEND = "OLLAMA")
+OLLAMA_EMBEDDING_MODEL_ID_LITERAL = ["nomic-embed-text", "mxbai-embed-large"]
+OLLAMA_EMBEDDING_MODEL_ID="nomic-embed-text"
+OLLAMA_EMBEDDING_MODEL_SIZE=768  
 # ========================= Vector DB Config =========================
-VECTOR_DB_BACKEND_LITERAL = ["QDRANT", "PGVECTOR"]
+VECTOR_DB_BACKEND_LITERAL = ["PGVECTOR"]
 VECTOR_DB_BACKEND = "PGVECTOR"
 VECTOR_DB_PATH = "qdrant_db"
 VECTOR_DB_DISTANCE_METHOD = "cosine"

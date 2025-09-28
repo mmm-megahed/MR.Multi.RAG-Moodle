@@ -1,0 +1,457 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 3253
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F1 20 Tf
+23. TL
+0 g
+56.6929133858267775 785.1970866141732586 Td
+(RAG Evaluation Report) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 756.8506299212598378 Td
+(Generated: 9/24/2025, 8:55:13 AM) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 742.6774015748030706 Td
+(Course ID: 36) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 728.5041732283464171 Td
+(Retrieval @k: 3) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+56.6929133858267775 685.9844881889763428 Td
+(Basic Performance) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 657.6380314960629221 Td
+(Total Questions: 40) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 643.4648031496062686 Td
+(Successful Responses: 40) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 629.291574803149615 Td
+(Response Rate: 100.00%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 615.1183464566928478 Td
+(Average Answer Length: 150 chars) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+56.6929133858267775 572.5986614173227736 Td
+(Core RAG Metrics) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 544.2522047244094665 Td
+(Context Precision: 94.2%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 530.0789763779526993 Td
+(Context Recall: 93.5%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 515.9057480314959321 Td
+(Answer Correctness: 38.4%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 501.7325196850393354 Td
+(Faithfulness: 86.4%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 487.559291338582625 Td
+(Answer Relevance: 26.5%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 473.3860629921259147 Td
+(Semantic Similarity: 40.8%) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+56.6929133858267775 430.8663779527558404 Td
+(Quality Metrics) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 402.5199212598424765 Td
+(Factual Accuracy: 24.3%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 388.3466929133857661 Td
+(Completeness: 42.5%) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+56.6929133858267775 345.8270078740156919 Td
+(NLP Evaluation Metrics) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 317.480551181102328 Td
+(BLEU-1: 49.2%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 303.3073228346455608 Td
+(BLEU-4: 26.8%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 289.1340944881889072 Td
+(ROUGE-1: 82.1%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 274.9608661417322537 Td
+(ROUGE-2: 60.9%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 260.7876377952754865 Td
+(ROUGE-L: 47.8%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 246.614409448818833 Td
+(METEOR: 28.3%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 218.2679527559054122 Td
+(BERT Precision: 49.2%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 204.0947244094487587 Td
+(BERT Recall: 82.1%) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+70.8661417322834666 189.9214960629919915 Td
+(BERT F1: 56.5%) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+56.6929133858267775 133.2285826771652637 Td
+(Overall Assessment) Tj
+ET
+BT
+/F1 12 Tf
+13.7999999999999989 TL
+0 g
+70.8661417322834666 104.882125984251843 Td
+(Overall RAG Quality Score: 63.3%) Tj
+ET
+BT
+/F1 12 Tf
+13.7999999999999989 TL
+0 g
+70.8661417322834666 76.5356692913385359 Td
+(Performance Grade: Good) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R ]
+/Count 1
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+6 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 5 0 R
+/F2 6 0 R
+/F3 7 0 R
+/F4 8 0 R
+/F5 9 0 R
+/F6 10 0 R
+/F7 11 0 R
+/F8 12 0 R
+/F9 13 0 R
+/F10 14 0 R
+/F11 15 0 R
+/F12 16 0 R
+/F13 17 0 R
+/F14 18 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+19 0 obj
+<<
+/Producer (jsPDF 2.5.1)
+/CreationDate (D:20250924085513+02'00')
+>>
+endobj
+20 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 21
+0000000000 65535 f 
+0000003457 00000 n 
+0000005274 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000003514 00000 n 
+0000003639 00000 n 
+0000003769 00000 n 
+0000003902 00000 n 
+0000004039 00000 n 
+0000004162 00000 n 
+0000004291 00000 n 
+0000004423 00000 n 
+0000004559 00000 n 
+0000004687 00000 n 
+0000004814 00000 n 
+0000004943 00000 n 
+0000005076 00000 n 
+0000005178 00000 n 
+0000005522 00000 n 
+0000005608 00000 n 
+trailer
+<<
+/Size 21
+/Root 20 0 R
+/Info 19 0 R
+/ID [ <C407EF61F2C09CCA5C23711CCF155656> <C407EF61F2C09CCA5C23711CCF155656> ]
+>>
+startxref
+5712
+%%EOF
