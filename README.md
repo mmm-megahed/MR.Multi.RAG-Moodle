@@ -1,4 +1,8 @@
+
 # MR. Multi@Moodle
+
+<img width="1920" height="1080" alt="Transcript (1)" src="https://github.com/user-attachments/assets/0cd5a27f-5b81-4fa9-8abd-ad634195e833" />
+
 
 This is a minimal implementation of the MRAG model for question answering.
 
