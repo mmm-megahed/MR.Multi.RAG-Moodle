@@ -1,12 +1,13 @@
 # Moodle Setup Instructions
 
-This project requires a Moodle installation. The `docker/moodle/` directory is not included in this repository to keep it lightweight.
+This project requires Moodle and Moodle Docker setup. The `docker/moodle/` and `docker/moodle-docker/` directories are not included in this repository to keep it lightweight.
 
-## Option 1: Download from Official Repository (Recommended)
+## Option 1: Download from Official Repositories (Recommended)
 
 ```bash
 cd docker
 git clone https://github.com/moodle/moodle.git
+git clone https://github.com/moodlehq/moodle-docker.git
 ```
 
 ## Option 2: Download from Moodle.org
@@ -15,18 +16,18 @@ git clone https://github.com/moodle/moodle.git
 2. Download the latest stable version
 3. Extract it to `docker/moodle/`
 
-## Option 3: Use Docker Image
+## Option 3: Use Docker Images
 
-You can also use the official Moodle Docker image by updating your `docker-compose.yml` to use:
+You can also use the official Moodle Docker images by updating your `docker-compose.yml` to use:
 ```yaml
 moodle:
   image: moodle/moodle:latest
   # ... rest of your configuration
 ```
 
-## After Downloading Moodle
+## After Downloading
 
-Once you have Moodle in the `docker/moodle/` directory, you can proceed with the Docker setup:
+Once you have both directories in place, you can proceed with the Docker setup:
 
 ```bash
 cd docker
@@ -39,3 +40,4 @@ sudo docker compose up -d
 - Allows users to choose their preferred Moodle version
 - Prevents conflicts with different Moodle installations
 - Follows best practices for including third-party software
+- Reduces repository size significantly

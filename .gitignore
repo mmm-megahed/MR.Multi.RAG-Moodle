@@ -4,3 +4,5 @@ package-lock.json
 package.json
 LICENSE
 assets/docker/moodle/
+docker/moodle/
+docker/moodle-docker/
